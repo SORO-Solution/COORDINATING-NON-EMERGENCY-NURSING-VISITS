@@ -12,7 +12,7 @@ start cmd /k "title NurseConnect Backend && cd /d "%~dp0backend" && .\venv\Scrip
 timeout /t 2 /nobreak >nul
 
 echo [2/2] Starting React Frontend (Vite)...
-start cmd /k "title NurseConnect Frontend && cd /d "%~dp0frontend" && npm run dev"
+start cmd /k "title NurseConnect Frontend && cd /d "%~dp0frontend" && npm run dev --host"
 
 echo.
 echo  =============================================
