@@ -1,100 +1,220 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Users, UserPlus, FileText, BarChart, Search, Calendar, Clock } from 'lucide-react';
+import {
+  Users, UserPlus, FileText, BarChart2, Search, X,
+  Shield, Stethoscope, CheckCircle, XCircle, Download, RefreshCw, Calendar,
+} from 'lucide-react';
+import AvailabilityManager from './AvailabilityManager';
+
+const API = 'http://localhost:8000/api';
+const SPECIALISATIONS = [
+  'Wound Care', 'IV Therapy', 'General Care', 'Pediatrics', 'Physiotherapy',
+  'Post-Op Care', 'Cardiac Care', 'Oncology', 'Respiratory Care', 'Mental Health',
+  'Geriatric Care', 'Palliative Care', 'Diabetes Management', 'Neurology', 'Orthopedics',
+];
 
 export default function AdminDashboard({ user }) {
   const [appointments, setAppointments] = useState([]);
-  const [availabilities, setAvailabilities] = useState([]);
+  const [nurses, setNurses] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [specRequests, setSpecRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState('appointments');
+  const [search, setSearch] = useState('');
+
+  // Edit appointment modal
   const [editAppt, setEditAppt] = useState(null);
   const [editDate, setEditDate] = useState('');
   const [editTime, setEditTime] = useState('');
 
-  const fetchData = async () => {
+  // Add user modal
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('password123');
+  const [newFirst, setNewFirst] = useState('');
+  const [newLast, setNewLast] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newRole, setNewRole] = useState('PATIENT');
+  const [newSpec, setNewSpec] = useState('General Care');
+  const [addError, setAddError] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  // Direct spec assignment modal
+  const [assignSpecNurse, setAssignSpecNurse] = useState(null);
+  const [assignSpec, setAssignSpec] = useState('');
+  const [assigning, setAssigning] = useState(false);
+
+  // Spec request review modal
+  const [reviewReq, setReviewReq] = useState(null);
+  const [reviewNote, setReviewNote] = useState('');
+  const [reviewing, setReviewing] = useState(false);
+
+  const token = localStorage.getItem('token');
+
+  const fetchAll = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const [apptsRes, availRes] = await Promise.all([
-        axios.get('http://localhost:8000/api/appointments/', { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get('http://localhost:8000/api/availabilities/', { headers: { Authorization: `Bearer ${token}` } })
+      const [apptRes, nursesRes, usersRes, specRes] = await Promise.all([
+        axios.get(`${API}/appointments/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/nurses/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/users/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/spec-requests/`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      setAppointments(apptsRes.data);
-      setAvailabilities(availRes.data);
-    } catch (err) {
-      console.error(err);
-    }
+      setAppointments(apptRes.data);
+      setNurses(nursesRes.data);
+      setUsers(usersRes.data);
+      setSpecRequests(specRes.data);
+    } catch (err) { console.error(err); }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchAll(); }, []);
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`http://localhost:8000/api/appointments/${id}/`, 
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      fetchData();
-    } catch (err) {
-      alert('Failed to update status');
-    }
+      await axios.patch(`${API}/appointments/${id}/`, { status: newStatus }, { headers: { Authorization: `Bearer ${token}` } });
+      fetchAll();
+    } catch { alert('Failed to update status'); }
   };
 
-  const handleSaveApptEdit = async (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`http://localhost:8000/api/appointments/${editAppt.id}/`, 
-        { date: editDate, start_time: editTime },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setEditAppt(null);
-      fetchData();
-    } catch (err) {
-      alert('Failed to update appointment time.');
-    }
+      await axios.patch(`${API}/appointments/${editAppt.id}/`, { date: editDate, start_time: editTime }, { headers: { Authorization: `Bearer ${token}` } });
+      setEditAppt(null); fetchAll();
+    } catch { alert('Failed to update appointment.'); }
   };
 
-  const openApptEdit = (appt) => {
-    setEditAppt(appt);
-    setEditDate(appt.date);
-    setEditTime(appt.start_time);
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setAdding(true); setAddError('');
+    try {
+      await axios.post(`${API}/users/`, {
+        username: newUsername, password: newPassword,
+        first_name: newFirst, last_name: newLast, email: newEmail,
+        role: newRole, specialisation: newSpec,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setShowAddUser(false);
+      setNewUsername(''); setNewFirst(''); setNewLast(''); setNewEmail('');
+      setNewRole('PATIENT'); setNewSpec('General Care');
+      fetchAll();
+    } catch (err) { setAddError(err.response?.data?.error || 'Failed to create user.'); }
+    finally { setAdding(false); }
   };
+
+  const handleAssignSpec = async (e) => {
+    e.preventDefault();
+    setAssigning(true);
+    try {
+      await axios.patch(`${API}/nurses/${assignSpecNurse.id}/set-specialisation/`, { specialisation: assignSpec }, { headers: { Authorization: `Bearer ${token}` } });
+      setAssignSpecNurse(null); setAssignSpec('');
+      fetchAll();
+    } catch { alert('Failed to assign specialisation.'); }
+    finally { setAssigning(false); }
+  };
+
+  const handleReview = async (action) => {
+    setReviewing(true);
+    try {
+      await axios.post(`${API}/spec-requests/${reviewReq.id}/${action}/`, { admin_note: reviewNote }, { headers: { Authorization: `Bearer ${token}` } });
+      setReviewReq(null); setReviewNote('');
+      fetchAll();
+    } catch { alert('Failed to review request.'); }
+    finally { setReviewing(false); }
+  };
+
+  const downloadReport = (url, filename) => {
+    axios.get(url, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' })
+      .then(r => {
+        const href = URL.createObjectURL(r.data);
+        const a = document.createElement('a');
+        a.href = href; a.download = filename;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(href);
+      }).catch(() => alert('Failed to generate report.'));
+  };
+
+  const filteredAppts = appointments.filter(a =>
+    !search || `${a.patient_details?.first_name} ${a.patient_details?.last_name} ${a.nurse_details?.user?.first_name} ${a.nurse_details?.user?.last_name} ${a.care_type}`.toLowerCase().includes(search.toLowerCase())
+  );
+  const filteredUsers = users.filter(u =>
+    !search || `${u.first_name} ${u.last_name} ${u.username} ${u.role}`.toLowerCase().includes(search.toLowerCase())
+  );
+  const nurseWorkload = nurses.map(n => ({
+    id: n.id, name: `${n.user.first_name} ${n.user.last_name}`,
+    spec: n.specialisation, active: n.active_appointments,
+  })).sort((a, b) => b.active - a.active);
+
+  const pendingSpecs = specRequests.filter(r => r.status === 'PENDING').length;
+
+  const Tab = ({ id, label, Icon, badge }) => (
+    <button onClick={() => setActiveTab(id)} style={{
+      display: 'flex', alignItems: 'center', gap: '0.4rem',
+      padding: '0.5rem 1rem', borderRadius: '8px', border: 'none', cursor: 'pointer',
+      background: activeTab === id ? 'rgba(79,70,229,0.1)' : 'transparent',
+      color: activeTab === id ? 'var(--primary)' : 'var(--text-muted)',
+      fontWeight: activeTab === id ? '600' : '400', fontSize: '0.875rem', position: 'relative',
+    }}>
+      <Icon size={15} /> {label}
+      {badge > 0 && (
+        <span style={{ background: 'var(--danger)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>{badge}</span>
+      )}
+    </button>
+  );
 
   return (
     <div className="animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>System <span className="text-gradient">Overview</span></h1>
-          <p style={{ color: 'var(--text-muted)' }}>Platform metrics and active user tracking.</p>
+          <p style={{ color: 'var(--text-muted)' }}>Platform management &amp; analytics.</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
           <div style={{ position: 'relative' }}>
-            <Search style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-muted)' }} size={18} />
-            <input type="text" placeholder="Search patients or nurses..." className="input-field" style={{ paddingLeft: '2.5rem', width: '250px' }} />
+            <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={15} />
+            <input type="text" placeholder="Search…" className="input-field" style={{ paddingLeft: '2.2rem', width: '200px' }} value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <button className="btn btn-primary">
-            <UserPlus size={20} />
-            Add User
-          </button>
+          <button className="btn btn-primary" onClick={() => setShowAddUser(true)}><UserPlus size={17} /> Add User</button>
         </div>
       </div>
 
+      {/* Stat strip */}
+      <div className="stat-grid" style={{ marginBottom: '1.5rem' }}>
+        {[
+          { label: 'Total Appointments', value: appointments.length, icon: FileText, color: 'var(--accent)', bg: 'rgba(14,165,233,0.1)' },
+          { label: 'Pending', value: appointments.filter(a => a.status === 'PENDING').length, icon: BarChart2, color: '#d97706', bg: 'rgba(245,158,11,0.1)' },
+          { label: 'Total Nurses', value: nurses.length, icon: Stethoscope, color: 'var(--success)', bg: 'rgba(16,185,129,0.1)' },
+          { label: 'Total Users', value: users.length, icon: Users, color: 'var(--primary)', bg: 'rgba(79,70,229,0.1)' },
+        ].map(s => (
+          <div className="stat-card" key={s.label}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div><div className="stat-title">{s.label}</div><div className="stat-value">{s.value}</div></div>
+              <div style={{ padding: '10px', background: s.bg, borderRadius: '10px', color: s.color }}><s.icon size={24} /></div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.5rem', padding: '0.4rem', background: 'var(--surface)', borderRadius: '12px', width: 'fit-content', border: '1px solid var(--glass-border)', flexWrap: 'wrap' }}>
+        <Tab id="appointments" label="Appointments" Icon={FileText} />
+        <Tab id="users" label="Users" Icon={Users} />
+        <Tab id="workload" label="Workload" Icon={BarChart2} />
+        <Tab id="availability" label="Availability" Icon={Calendar} />
+        <Tab id="spec-requests" label="Spec Requests" Icon={RefreshCw} badge={pendingSpecs} />
+        <Tab id="reports" label="Reports" Icon={Download} />
+      </div>
+
+      {/* ── Edit appointment modal ── */}
       {editAppt && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px', transform: 'scale(1)', animation: 'fadeIn 0.2s ease-out' }}>
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>Edit Appointment Time</h2>
-            <form onSubmit={handleSaveApptEdit}>
-              <div className="input-group">
-                <label className="input-label">Date</label>
-                <input type="date" className="input-field" value={editDate} onChange={e => setEditDate(e.target.value)} required />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Time</label>
-                <input type="time" className="input-field" value={editTime} onChange={e => setEditTime(e.target.value)} required />
-              </div>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem' }}>Edit Appointment</h2>
+              <button onClick={() => setEditAppt(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveEdit}>
+              <div className="input-group"><label className="input-label">Date</label><input type="date" className="input-field" value={editDate} onChange={e => setEditDate(e.target.value)} required /></div>
+              <div className="input-group"><label className="input-label">Time</label><input type="time" className="input-field" value={editTime} onChange={e => setEditTime(e.target.value)} required /></div>
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Changes</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save</button>
                 <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setEditAppt(null)}>Cancel</button>
               </div>
             </form>
@@ -102,123 +222,271 @@ export default function AdminDashboard({ user }) {
         </div>
       )}
 
-      <div className="stat-grid">
-        <div className="stat-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="stat-title">Total Appointments</div>
-              <div className="stat-value">{appointments.length}</div>
+      {/* ── Add user modal ── */}
+      {showAddUser && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div className="card" style={{ width: '100%', maxWidth: '460px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem' }}>Add New User</h2>
+              <button onClick={() => setShowAddUser(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
             </div>
-            <div style={{ padding: '10px', background: 'rgba(14, 165, 233, 0.1)', borderRadius: '10px', color: 'var(--accent)' }}>
-              <FileText size={24} />
-            </div>
+            {addError && <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}>{addError}</div>}
+            <form onSubmit={handleAddUser}>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div className="input-group" style={{ flex: 1 }}><label className="input-label">First Name</label><input className="input-field" value={newFirst} onChange={e => setNewFirst(e.target.value)} required /></div>
+                <div className="input-group" style={{ flex: 1 }}><label className="input-label">Last Name</label><input className="input-field" value={newLast} onChange={e => setNewLast(e.target.value)} required /></div>
+              </div>
+              <div className="input-group"><label className="input-label">Username</label><input className="input-field" value={newUsername} onChange={e => setNewUsername(e.target.value)} required /></div>
+              <div className="input-group"><label className="input-label">Email</label><input type="email" className="input-field" value={newEmail} onChange={e => setNewEmail(e.target.value)} /></div>
+              <div className="input-group"><label className="input-label">Password</label><input className="input-field" value={newPassword} onChange={e => setNewPassword(e.target.value)} required /></div>
+              <div className="input-group"><label className="input-label">Role</label>
+                <select className="input-field" value={newRole} onChange={e => setNewRole(e.target.value)}>
+                  <option value="PATIENT">Patient</option><option value="NURSE">Nurse</option><option value="ADMIN">Admin</option>
+                </select>
+              </div>
+              {newRole === 'NURSE' && (
+                <div className="input-group"><label className="input-label">Specialisation</label>
+                  <select className="input-field" value={newSpec} onChange={e => setNewSpec(e.target.value)}>
+                    {SPECIALISATIONS.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={adding}>{adding ? 'Creating…' : 'Create User'}</button>
+                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowAddUser(false)}>Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
-        <div className="stat-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="stat-title">Pending Requests</div>
-              <div className="stat-value">{appointments.filter(a => a.status === 'PENDING').length}</div>
-            </div>
-            <div style={{ padding: '10px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '10px', color: '#d97706' }}>
-              <BarChart size={24} />
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>All Platform Appointments</h2>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Patient</th>
-                <th>Nurse</th>
-                <th>Type</th>
-                <th>Date / Time</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map(appt => (
-                <tr key={appt.id}>
-                  <td>#{appt.id}</td>
-                  <td style={{ fontWeight: '500' }}>{appt.patient_details?.first_name} {appt.patient_details?.last_name}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{appt.nurse_details?.user?.first_name || 'Unassigned'} {appt.nurse_details?.user?.last_name || ''}</td>
-                  <td>{appt.care_type}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {appt.date} @ {appt.start_time}
-                      <button onClick={() => openApptEdit(appt)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline' }}>Edit</button>
+      {/* ── Assign spec modal ── */}
+      {assignSpecNurse && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem' }}>Assign Specialisation</h2>
+              <button onClick={() => setAssignSpecNurse(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+            </div>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+              Nurse: <strong>{assignSpecNurse.user.first_name} {assignSpecNurse.user.last_name}</strong><br />
+              Current: <strong style={{ color: 'var(--primary)' }}>{assignSpecNurse.specialisation}</strong>
+            </p>
+            <form onSubmit={handleAssignSpec}>
+              <div className="input-group"><label className="input-label">New Specialisation</label>
+                <select className="input-field" value={assignSpec} onChange={e => setAssignSpec(e.target.value)} required>
+                  <option value="">— Select —</option>
+                  {SPECIALISATIONS.map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={assigning}>{assigning ? 'Saving…' : 'Assign'}</button>
+                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setAssignSpecNurse(null)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Review spec request modal ── */}
+      {reviewReq && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div className="card" style={{ width: '100%', maxWidth: '440px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem' }}>Review Request</h2>
+              <button onClick={() => setReviewReq(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+            </div>
+            <div style={{ background: 'var(--surface-light)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
+              <div><strong>Nurse:</strong> {reviewReq.nurse_details?.user?.first_name} {reviewReq.nurse_details?.user?.last_name}</div>
+              <div><strong>From:</strong> {reviewReq.current_specialisation} → <strong>{reviewReq.requested_specialisation}</strong></div>
+              <div style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}><strong>Reason:</strong> {reviewReq.reason || '—'}</div>
+            </div>
+            <div className="input-group"><label className="input-label">Admin Note (optional)</label>
+              <textarea className="input-field" rows={2} style={{ resize: 'vertical' }} value={reviewNote} onChange={e => setReviewNote(e.target.value)} placeholder="Add a note for the nurse…" />
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button onClick={() => handleReview('approve')} className="btn btn-primary" style={{ flex: 1 }} disabled={reviewing}>
+                <CheckCircle size={16} /> Approve
+              </button>
+              <button onClick={() => handleReview('reject')} className="btn btn-outline" style={{ flex: 1, color: 'var(--danger)', borderColor: 'var(--danger)' }} disabled={reviewing}>
+                <XCircle size={16} /> Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Appointments tab ── */}
+      {activeTab === 'appointments' && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.15rem', marginBottom: '1.5rem' }}>All Platform Appointments</h2>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="admin-table">
+              <thead><tr><th>ID</th><th>Patient</th><th>Nurse</th><th>Type</th><th>Date / Time</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                {filteredAppts.map(appt => (
+                  <tr key={appt.id}>
+                    <td>#{appt.id}</td>
+                    <td style={{ fontWeight: '500' }}>{appt.patient_details?.first_name} {appt.patient_details?.last_name}</td>
+                    <td>{appt.nurse_details?.user?.first_name || '—'} {appt.nurse_details?.user?.last_name || ''}</td>
+                    <td>{appt.care_type}</td>
+                    <td>{appt.date} @ {appt.start_time}
+                      <button onClick={() => { setEditAppt(appt); setEditDate(appt.date); setEditTime(appt.start_time); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline', marginLeft: '0.5rem' }}>Edit</button>
+                    </td>
+                    <td>
+                      <select className="input-field" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', width: 'auto' }} value={appt.status} onChange={e => handleStatusChange(appt.id, e.target.value)}>
+                        <option>PENDING</option><option>CONFIRMED</option><option>COMPLETED</option><option>CANCELLED</option>
+                      </select>
+                    </td>
+                    <td><span className={`badge ${appt.status === 'CONFIRMED' ? 'badge-confirmed' : 'badge-pending'}`}>{appt.status}</span></td>
+                  </tr>
+                ))}
+                {filteredAppts.length === 0 && <tr><td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No appointments found.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Users tab ── */}
+      {activeTab === 'users' && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.15rem', marginBottom: '1.5rem' }}>All Users</h2>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="admin-table">
+              <thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Role</th><th>City</th><th>Actions</th></tr></thead>
+              <tbody>
+                {filteredUsers.map(u => {
+                  const nurseProfile = u.role === 'NURSE' ? nurses.find(n => n.user.id === u.id) : null;
+                  return (
+                    <tr key={u.id}>
+                      <td>#{u.id}</td>
+                      <td style={{ fontWeight: '500' }}>{u.first_name} {u.last_name}</td>
+                      <td>{u.username}</td>
+                      <td>
+                        <span className={`badge ${u.is_superuser ? '' : u.role === 'ADMIN' ? 'badge-confirmed' : u.role === 'NURSE' ? 'badge-pending' : ''}`}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: u.is_superuser ? 'rgba(124,58,237,0.1)' : '', color: u.is_superuser ? '#7c3aed' : '' }}>
+                          {u.is_superuser ? <><Shield size={10} /> SUPERADMIN</> : u.role === 'ADMIN' ? <><Shield size={10} /> ADMIN</> : u.role === 'NURSE' ? <><Stethoscope size={10} /> NURSE</> : 'PATIENT'}
+                        </span>
+                        {nurseProfile && <span style={{ marginLeft: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{nurseProfile.specialisation}</span>}
+                      </td>
+                      <td>{u.city || '—'}</td>
+                      <td>
+                        {nurseProfile && (
+                          <button onClick={() => { setAssignSpecNurse(nurseProfile); setAssignSpec(nurseProfile.specialisation); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: '500', fontSize: '0.8rem' }}>
+                            Assign Spec
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredUsers.length === 0 && <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No users found.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Workload tab ── */}
+      {activeTab === 'workload' && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.15rem', marginBottom: '1.5rem' }}>Nurse Workload Analysis</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {nurseWorkload.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No nurses yet.</p>}
+            {nurseWorkload.map((n, i) => {
+              const max = Math.max(...nurseWorkload.map(x => x.active), 1);
+              const pct = Math.round((n.active / max) * 100);
+              return (
+                <div key={i} style={{ padding: '1rem', background: 'var(--surface-light)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <div>
+                      <span style={{ fontWeight: '600' }}>{n.name}</span>
+                      <span style={{ marginLeft: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{n.spec}</span>
                     </div>
-                  </td>
-                  <td>
-                    <select 
-                      className="input-field" 
-                      style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem', width: 'auto' }}
-                      value={appt.status}
-                      onChange={(e) => handleStatusChange(appt.id, e.target.value)}
-                    >
-                      <option value="PENDING">PENDING</option>
-                      <option value="CONFIRMED">CONFIRMED</option>
-                      <option value="COMPLETED">COMPLETED</option>
-                      <option value="CANCELLED">CANCELLED</option>
-                    </select>
-                  </td>
-                  <td>
-                    <button style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: '500' }}>Manage Details</button>
-                  </td>
-                </tr>
-              ))}
-              {appointments.length === 0 && (
-                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No appointments found in the system.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Nurse Availabilities</h2>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nurse ID</th>
-                <th>Date</th>
-                <th>Time Window</th>
-                <th>Booked Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {availabilities.map(avail => (
-                <tr key={avail.id}>
-                  <td>#{avail.id}</td>
-                  <td style={{ fontWeight: '500' }}>Nurse {avail.nurse}</td>
-                  <td>{avail.date}</td>
-                  <td>{avail.start_time} - {avail.end_time}</td>
-                  <td>
-                    <span className={`badge ${avail.is_booked ? 'badge-pending' : 'badge-confirmed'}`}>
-                      {avail.is_booked ? 'Booked' : 'Open'}
+                    <span style={{ fontWeight: '700', color: pct > 75 ? 'var(--danger)' : pct > 40 ? '#d97706' : 'var(--success)' }}>
+                      {n.active} active
                     </span>
-                  </td>
-                  <td>
-                    <button onClick={() => alert('Editing availability is a feature coming in Phase 2!')} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: '500' }}>Edit Time</button>
-                  </td>
-                </tr>
-              ))}
-              {availabilities.length === 0 && (
-                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No availabilities set.</td></tr>
-              )}
-            </tbody>
-          </table>
+                  </div>
+                  <div style={{ height: '8px', background: 'var(--glass-border)', borderRadius: '4px' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: pct > 75 ? 'var(--danger)' : pct > 40 ? '#f59e0b' : 'var(--success)', borderRadius: '4px', transition: 'width 0.4s' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ── Spec requests tab ── */}
+      {activeTab === 'spec-requests' && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.15rem', marginBottom: '1.5rem' }}>Specialisation Change Requests</h2>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="admin-table">
+              <thead><tr><th>ID</th><th>Nurse</th><th>From</th><th>To</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                {specRequests.map(r => (
+                  <tr key={r.id}>
+                    <td>#{r.id}</td>
+                    <td style={{ fontWeight: '500' }}>{r.nurse_details?.user?.first_name} {r.nurse_details?.user?.last_name}</td>
+                    <td>{r.current_specialisation}</td>
+                    <td style={{ fontWeight: '500', color: 'var(--primary)' }}>{r.requested_specialisation}</td>
+                    <td style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{r.reason || '—'}</td>
+                    <td>
+                      <span style={{ fontWeight: '600', color: r.status === 'APPROVED' ? 'var(--success)' : r.status === 'REJECTED' ? 'var(--danger)' : '#f59e0b', fontSize: '0.8rem' }}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td>
+                      {r.status === 'PENDING' ? (
+                        <button onClick={() => { setReviewReq(r); setReviewNote(''); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: '500', fontSize: '0.8rem' }}>Review</button>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{r.admin_note || '—'}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {specRequests.length === 0 && <tr><td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No specialisation change requests yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Availability tab ── */}
+      {activeTab === 'availability' && <AvailabilityManager user={user} />}
+
+      {/* ── Reports tab ── */}
+      {activeTab === 'reports' && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.15rem', marginBottom: '1.5rem' }}>Generate &amp; Download Reports</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem' }}>
+            {[
+              { label: 'All Appointments (CSV)', desc: 'Full appointment history export', url: `${API}/reports/admin/appointments/csv/`, filename: 'appointments.csv', color: '#0ea5e9' },
+              { label: 'All Appointments (PDF)', desc: 'Formatted printable report', url: `${API}/reports/admin/appointments/pdf/`, filename: 'appointments_report.pdf', color: '#6366f1' },
+              { label: 'Nurse Workload (PDF)', desc: 'Per-nurse load analysis', url: `${API}/reports/admin/workload/pdf/`, filename: 'nurse_workload.pdf', color: '#10b981' },
+              { label: 'All Users (CSV)', desc: 'Complete user registry', url: `${API}/reports/admin/users/csv/`, filename: 'users.csv', color: '#8b5cf6' },
+              { label: 'Availability Summary (CSV)', desc: 'All nurse availability slots', url: `${API}/reports/admin/availability/csv/`, filename: 'nurse_availability.csv', color: '#f59e0b' },
+            ].map(({ label, desc, url, filename, color }) => (
+              <div key={label} style={{ padding: '1.25rem', background: 'var(--surface-light)', borderRadius: '12px', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
+                    <Download size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{label}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{desc}</div>
+                  </div>
+                </div>
+                <button onClick={() => downloadReport(url, filename)} className="btn btn-outline" style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', justifyContent: 'center' }}>
+                  <Download size={14} /> Download
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
