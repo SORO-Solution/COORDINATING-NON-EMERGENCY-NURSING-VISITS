@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-qd#9ibcjzt!dite3um^@u20=l^n-ce@*0=pk48=@me&0icf*)n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'channels',
     'api',
 ]
 
@@ -71,6 +72,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+
+# AES-256 key (32 bytes, base64-encoded). Change in production!
+MESSAGE_ENCRYPTION_KEY = 'dVqS3RIZKPi+EhZ6EsHdP/e65MgMUDf8B8rv6/WPudo='
 
 
 # Database
@@ -119,6 +130,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 AUTH_USER_MODEL = 'api.CustomUser'
 
