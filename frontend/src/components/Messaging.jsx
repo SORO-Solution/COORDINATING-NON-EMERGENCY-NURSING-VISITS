@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { Send, MessageSquare, Lock, ChevronRight, Paperclip, X, Image, Video } from 'lucide-react';
 
-const API = 'http://localhost:8000/api';
-const WS_BASE = 'ws://localhost:8000/ws/chat';
+const API = `http://${window.location.hostname}:8000/api`;
+const WS_BASE = `ws://${window.location.hostname}:8000/ws/chat`;
 const LS_LAST_SEEN = 'nc_last_seen';
 
 function getLastSeen() {
@@ -50,7 +50,9 @@ export default function Messaging({ user }) {
       .then(r => setAppointments(r.data))
       .catch(console.error);
     fetchSummary();
-  }, []);
+    const iv = setInterval(fetchSummary, 3000);
+    return () => clearInterval(iv);
+  }, [fetchSummary, token]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
