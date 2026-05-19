@@ -13,13 +13,19 @@ const SPECIALISATIONS = [
   'Geriatric Care', 'Palliative Care', 'Diabetes Management', 'Neurology', 'Orthopedics',
 ];
 
-export default function AdminDashboard({ user }) {
+export default function AdminDashboard({ user, initialTab }) {
   const [appointments, setAppointments] = useState([]);
   const [nurses, setNurses] = useState([]);
   const [users, setUsers] = useState([]);
   const [specRequests, setSpecRequests] = useState([]);
-  const [activeTab, setActiveTab] = useState('appointments');
+  const [activeTab, setActiveTab] = useState(initialTab || 'appointments');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Edit appointment modal
   const [editAppt, setEditAppt] = useState(null);
@@ -204,17 +210,30 @@ export default function AdminDashboard({ user }) {
 
       {/* ── Edit appointment modal ── */}
       {editAppt && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem' }}>Edit Appointment</h2>
-              <button onClick={() => setEditAppt(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setEditAppt(null); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.3)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', zIndex: 100 }}
+        >
+          <div 
+            className="animate-slide-in-right" 
+            style={{ 
+              width: '100%', maxWidth: '440px', background: 'var(--surface)', maxHeight: 'calc(100vh - 3rem)', 
+              boxShadow: '-10px 0 30px rgba(0,0,0,0.15)', border: '1px solid var(--glass-border)', borderRadius: '16px', margin: '1.5rem',
+              display: 'flex', flexDirection: 'column', padding: '2.5rem 2rem', overflowY: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Edit Appointment</h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Modify scheduling details for appointment #{editAppt.id}.</p>
+              </div>
+              <button onClick={() => setEditAppt(null)} style={{ background: 'var(--surface-light)', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}><X size={18} /></button>
             </div>
-            <form onSubmit={handleSaveEdit}>
+            <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
               <div className="input-group"><label className="input-label">Date</label><input type="date" className="input-field" value={editDate} onChange={e => setEditDate(e.target.value)} required /></div>
               <div className="input-group"><label className="input-label">Time</label><input type="time" className="input-field" value={editTime} onChange={e => setEditTime(e.target.value)} required /></div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save</button>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto', paddingTop: '2rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save Changes</button>
                 <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setEditAppt(null)}>Cancel</button>
               </div>
             </form>
@@ -224,14 +243,27 @@ export default function AdminDashboard({ user }) {
 
       {/* ── Add user modal ── */}
       {showAddUser && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '460px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem' }}>Add New User</h2>
-              <button onClick={() => setShowAddUser(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAddUser(false); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.3)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', zIndex: 100 }}
+        >
+          <div 
+            className="animate-slide-in-right" 
+            style={{ 
+              width: '100%', maxWidth: '460px', background: 'var(--surface)', maxHeight: 'calc(100vh - 3rem)', 
+              boxShadow: '-10px 0 30px rgba(0,0,0,0.15)', border: '1px solid var(--glass-border)', borderRadius: '16px', margin: '1.5rem',
+              display: 'flex', flexDirection: 'column', padding: '2.5rem 2rem', overflowY: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Add New User</h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Register a patient, nurse, or administrator profile.</p>
+              </div>
+              <button onClick={() => setShowAddUser(false)} style={{ background: 'var(--surface-light)', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}><X size={18} /></button>
             </div>
-            {addError && <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}>{addError}</div>}
-            <form onSubmit={handleAddUser}>
+            {addError && <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.875rem' }}>{addError}</div>}
+            <form onSubmit={handleAddUser} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div className="input-group" style={{ flex: 1 }}><label className="input-label">First Name</label><input className="input-field" value={newFirst} onChange={e => setNewFirst(e.target.value)} required /></div>
                 <div className="input-group" style={{ flex: 1 }}><label className="input-label">Last Name</label><input className="input-field" value={newLast} onChange={e => setNewLast(e.target.value)} required /></div>
@@ -251,7 +283,7 @@ export default function AdminDashboard({ user }) {
                   </select>
                 </div>
               )}
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto', paddingTop: '2rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={adding}>{adding ? 'Creating…' : 'Create User'}</button>
                 <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowAddUser(false)}>Cancel</button>
               </div>
@@ -262,25 +294,42 @@ export default function AdminDashboard({ user }) {
 
       {/* ── Assign spec modal ── */}
       {assignSpecNurse && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem' }}>Assign Specialisation</h2>
-              <button onClick={() => setAssignSpecNurse(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setAssignSpecNurse(null); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.3)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', zIndex: 100 }}
+        >
+          <div 
+            className="animate-slide-in-right" 
+            style={{ 
+              width: '100%', maxWidth: '440px', background: 'var(--surface)', maxHeight: 'calc(100vh - 3rem)', 
+              boxShadow: '-10px 0 30px rgba(0,0,0,0.15)', border: '1px solid var(--glass-border)', borderRadius: '16px', margin: '1.5rem',
+              display: 'flex', flexDirection: 'column', padding: '2.5rem 2rem', overflowY: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Assign Specialisation</h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Directly allocate a specialisation to a nurse.</p>
+              </div>
+              <button onClick={() => setAssignSpecNurse(null)} style={{ background: 'var(--surface-light)', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}><X size={18} /></button>
             </div>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.9rem' }}>
-              Nurse: <strong>{assignSpecNurse.user.first_name} {assignSpecNurse.user.last_name}</strong><br />
-              Current: <strong style={{ color: 'var(--primary)' }}>{assignSpecNurse.specialisation}</strong>
-            </p>
-            <form onSubmit={handleAssignSpec}>
+            
+            <div style={{ background: 'var(--surface-light)', borderRadius: '12px', padding: '1.25rem', marginBottom: '2rem', border: '1px solid var(--glass-border)' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Nurse Profile</div>
+              <div style={{ fontWeight: '600', fontSize: '1.05rem', marginBottom: '0.75rem' }}>{assignSpecNurse.user.first_name} {assignSpecNurse.user.last_name}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Current Specialisation</div>
+              <span className="badge badge-pending" style={{ fontSize: '0.8rem', display: 'inline-block' }}>{assignSpecNurse.specialisation}</span>
+            </div>
+
+            <form onSubmit={handleAssignSpec} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
               <div className="input-group"><label className="input-label">New Specialisation</label>
                 <select className="input-field" value={assignSpec} onChange={e => setAssignSpec(e.target.value)} required>
                   <option value="">— Select —</option>
                   {SPECIALISATIONS.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={assigning}>{assigning ? 'Saving…' : 'Assign'}</button>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto', paddingTop: '2rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={assigning}>{assigning ? 'Saving…' : 'Assign Specialisation'}</button>
                 <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setAssignSpecNurse(null)}>Cancel</button>
               </div>
             </form>
@@ -290,27 +339,48 @@ export default function AdminDashboard({ user }) {
 
       {/* ── Review spec request modal ── */}
       {reviewReq && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '440px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem' }}>Review Request</h2>
-              <button onClick={() => setReviewReq(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setReviewReq(null); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.3)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', zIndex: 100 }}
+        >
+          <div 
+            className="animate-slide-in-right" 
+            style={{ 
+              width: '100%', maxWidth: '440px', background: 'var(--surface)', maxHeight: 'calc(100vh - 3rem)', 
+              boxShadow: '-10px 0 30px rgba(0,0,0,0.15)', border: '1px solid var(--glass-border)', borderRadius: '16px', margin: '1.5rem',
+              display: 'flex', flexDirection: 'column', padding: '2.5rem 2rem', overflowY: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Review Request</h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Review and decide on a nurse specialisation change request.</p>
+              </div>
+              <button onClick={() => setReviewReq(null)} style={{ background: 'var(--surface-light)', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}><X size={18} /></button>
             </div>
-            <div style={{ background: 'var(--surface-light)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
+
+            <div style={{ background: 'var(--surface-light)', borderRadius: '12px', padding: '1.25rem', marginBottom: '2rem', border: '1px solid var(--glass-border)', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div><strong>Nurse:</strong> {reviewReq.nurse_details?.user?.first_name} {reviewReq.nurse_details?.user?.last_name}</div>
-              <div><strong>From:</strong> {reviewReq.current_specialisation} → <strong>{reviewReq.requested_specialisation}</strong></div>
-              <div style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}><strong>Reason:</strong> {reviewReq.reason || '—'}</div>
+              <div><strong>From:</strong> <span className="badge badge-pending" style={{ padding: '0.15rem 0.5rem', fontSize: '0.75rem' }}>{reviewReq.current_specialisation}</span> → <span className="badge badge-confirmed" style={{ padding: '0.15rem 0.5rem', fontSize: '0.75rem' }}>{reviewReq.requested_specialisation}</span></div>
+              <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '0.75rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>
+                <strong>Reason for change:</strong>
+                <p style={{ marginTop: '0.25rem', fontStyle: 'italic', lineHeight: '1.4' }}>"{reviewReq.reason || '—'}"</p>
+              </div>
             </div>
-            <div className="input-group"><label className="input-label">Admin Note (optional)</label>
-              <textarea className="input-field" rows={2} style={{ resize: 'vertical' }} value={reviewNote} onChange={e => setReviewNote(e.target.value)} placeholder="Add a note for the nurse…" />
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-              <button onClick={() => handleReview('approve')} className="btn btn-primary" style={{ flex: 1 }} disabled={reviewing}>
-                <CheckCircle size={16} /> Approve
-              </button>
-              <button onClick={() => handleReview('reject')} className="btn btn-outline" style={{ flex: 1, color: 'var(--danger)', borderColor: 'var(--danger)' }} disabled={reviewing}>
-                <XCircle size={16} /> Reject
-              </button>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
+              <div className="input-group" style={{ display: 'flex', flexDirection: 'column' }}><label className="input-label">Admin Note (optional)</label>
+                <textarea className="input-field" rows={4} style={{ resize: 'vertical' }} value={reviewNote} onChange={e => setReviewNote(e.target.value)} placeholder="Add a note/reason for the nurse…" />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto', paddingTop: '2rem' }}>
+                <button onClick={() => handleReview('approve')} className="btn btn-primary" style={{ flex: 1 }} disabled={reviewing}>
+                  <CheckCircle size={16} /> Approve
+                </button>
+                <button onClick={() => handleReview('reject')} className="btn btn-outline" style={{ flex: 1, color: 'var(--danger)', borderColor: 'var(--danger)', background: 'transparent' }} disabled={reviewing}>
+                  <XCircle size={16} /> Reject
+                </button>
+              </div>
             </div>
           </div>
         </div>
