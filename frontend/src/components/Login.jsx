@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { HeartPulse, Lock, User, Mail, ShieldCheck, ArrowRight, Eye, EyeOff, Stethoscope, Clock, Shield } from 'lucide-react';
 
+const API = `http://${window.location.hostname}:8000/api`;
+
 export default function Login({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
@@ -18,7 +20,7 @@ export default function Login({ onLogin }) {
     setError('');
     try {
       if (!isLogin) {
-        await axios.post('http://localhost:8000/api/register/', {
+        await axios.post(`${API}/register/`, {
           username, password, first_name: firstName, last_name: lastName
         });
         setIsLogin(true);
@@ -26,10 +28,10 @@ export default function Login({ onLogin }) {
         setLoading(false);
         return;
       }
-      const tokenRes = await axios.post('http://localhost:8000/api/token/', { username, password });
+      const tokenRes = await axios.post(`${API}/token/`, { username, password });
       const token = tokenRes.data.access;
       localStorage.setItem('token', token);
-      const userRes = await axios.get('http://localhost:8000/api/me/', {
+      const userRes = await axios.get(`${API}/me/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       localStorage.setItem('user', JSON.stringify(userRes.data));
