@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Calendar, Clock, Activity, CheckCircle, User, X, Download, FileText, RefreshCw } from 'lucide-react';
 
-const API = 'http://localhost:8000/api';
+const API = `http://${window.location.hostname}:8000/api`;
 const SPECIALISATIONS = [
   'Wound Care', 'IV Therapy', 'General Care', 'Pediatrics', 'Physiotherapy',
   'Post-Op Care', 'Cardiac Care', 'Oncology', 'Respiratory Care', 'Mental Health',
