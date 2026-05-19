@@ -1,220 +1,198 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, Clock, MapPin, Activity, Plus, MessageSquare, ChevronRight, User } from 'lucide-react';
+import { Calendar, Clock, Activity, Plus, MessageSquare, ChevronRight, User, Sparkles, X } from 'lucide-react';
+
+const API = 'http://localhost:8000/api';
+const CARE_TYPES = ['Wound Care', 'IV Therapy', 'General Checkup', 'Pediatrics', 'Physiotherapy', 'Post-Op Care'];
 
 export default function PatientDashboard({ user }) {
-  const [activeTab, setActiveTab] = useState('upcoming');
   const [appointments, setAppointments] = useState([]);
-  const [nurses, setNurses] = useState([]);
-  
   const [showModal, setShowModal] = useState(false);
   const [newDate, setNewDate] = useState('');
-  const [newTime, setNewTime] = useState('');
-  const [newType, setNewType] = useState('Wound Care');
-  const [selectedNurseId, setSelectedNurseId] = useState('');
+  const [newType, setNewType] = useState(CARE_TYPES[0]);
+  const [newNotes, setNewNotes] = useState('');
+  const [matching, setMatching] = useState(false);
+  const [matchResult, setMatchResult] = useState(null); // null | 'success' | 'error'
+  const [matchMessage, setMatchMessage] = useState('');
 
-  const [availabilities, setAvailabilities] = useState([]);
+  const token = localStorage.getItem('token');
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const [apptsRes, nursesRes, availRes] = await Promise.all([
-        axios.get('http://localhost:8000/api/appointments/', { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get('http://localhost:8000/api/nurses/', { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get('http://localhost:8000/api/availabilities/', { headers: { Authorization: `Bearer ${token}` } })
-      ]);
-      setAppointments(apptsRes.data);
-      setNurses(nursesRes.data);
-      setAvailabilities(availRes.data);
-      if (nursesRes.data.length > 0) {
-        setSelectedNurseId(nursesRes.data[0].id);
-      }
+      const r = await axios.get(`${API}/appointments/`, { headers: { Authorization: `Bearer ${token}` } });
+      setAppointments(r.data);
     } catch (err) {
       console.error(err);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
+
+  const openModal = () => {
+    setShowModal(true);
+    setMatchResult(null);
+    setMatchMessage('');
+    setNewDate('');
+    setNewNotes('');
+    setNewType(CARE_TYPES[0]);
+  };
 
   const handleRequestVisit = async (e) => {
     e.preventDefault();
+    setMatching(true);
+    setMatchResult(null);
+    setMatchMessage('');
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8000/api/appointments/', {
-        patient: user.id,
-        nurse: selectedNurseId, 
-        date: newDate,
-        start_time: newTime,
+      const r = await axios.post(`${API}/appointments/request/`, {
         care_type: newType,
-        status: 'PENDING'
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setShowModal(false);
+        date: newDate,
+        notes: newNotes,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      const appt = r.data;
+      const nurseName = `${appt.nurse_details?.user?.first_name || ''} ${appt.nurse_details?.user?.last_name || ''}`.trim();
+      setMatchResult('success');
+      setMatchMessage(`Matched! ${nurseName} (${appt.nurse_details?.specialisation}) will visit you on ${appt.date} at ${appt.start_time}.`);
       fetchData();
     } catch (err) {
-      console.error(err);
-      alert('Error creating appointment');
+      setMatchResult('error');
+      setMatchMessage(err.response?.data?.error || 'No nurse available. Try a different date.');
+    } finally {
+      setMatching(false);
     }
   };
+
+  const upcoming = appointments.filter(a => ['PENDING', 'CONFIRMED'].includes(a.status));
+  const completed = appointments.filter(a => a.status === 'COMPLETED');
+
+  const statusClass = (s) => s === 'CONFIRMED' ? 'badge-confirmed' : s === 'COMPLETED' ? 'badge-success' : 'badge-pending';
 
   return (
     <div className="animate-fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
-          <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Welcome back, <span className="text-gradient">{user.first_name}</span></h1>
-          <p style={{ color: 'var(--text-muted)' }}>Here's what's happening with your care schedule today.</p>
+          <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+            Welcome back, <span className="text-gradient">{user.first_name}</span>
+          </h1>
+          <p style={{ color: 'var(--text-muted)' }}>Here's your care schedule.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <Plus size={20} />
-          Request Visit
+        <button className="btn btn-primary" onClick={openModal}>
+          <Plus size={20} /> Request Visit
         </button>
       </div>
 
+      {/* Smart-match modal */}
       {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '450px', transform: 'scale(1)', animation: 'fadeIn 0.2s ease-out' }}>
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>Request New Visit</h2>
-            <form onSubmit={handleRequestVisit}>
-              <div className="input-group">
-                <label className="input-label">Select Nurse</label>
-                <select className="input-field" value={selectedNurseId} onChange={e => setSelectedNurseId(e.target.value)} required>
-                  {nurses.map(n => (
-                    <option key={n.id} value={n.id}>
-                      {n.user.first_name} {n.user.last_name} — {n.specialisation}
-                    </option>
-                  ))}
-                </select>
-                {selectedNurseId && (
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                    <strong>Available:</strong> {
-                      availabilities.filter(a => a.nurse.toString() === selectedNurseId.toString() && !a.is_booked)
-                        .map(a => `${a.date} (${a.start_time.substring(0,5)} - ${a.end_time.substring(0,5)})`)
-                        .join(', ') || 'No specific times set.'
-                    }
-                  </div>
-                )}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div className="card" style={{ width: '100%', maxWidth: '460px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem' }}>Request a Visit</h2>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(79,70,229,0.06)', border: '1px solid rgba(79,70,229,0.15)', borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1.25rem' }}>
+              <Sparkles size={16} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                Our algorithm will automatically match you to the best available nurse based on specialisation and workload.
+              </p>
+            </div>
+
+            {matchResult && (
+              <div style={{
+                padding: '0.875rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.875rem',
+                background: matchResult === 'success' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+                color: matchResult === 'success' ? 'var(--success)' : 'var(--danger)',
+                border: `1px solid ${matchResult === 'success' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+              }}>
+                {matchMessage}
               </div>
-              <div className="input-group">
-                <label className="input-label">Care Type</label>
-                <select className="input-field" value={newType} onChange={e => setNewType(e.target.value)} required>
-                  <option>Wound Care</option>
-                  <option>IV Therapy</option>
-                  <option>General Checkup</option>
-                  <option>Pediatrics</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div className="input-group" style={{ flex: 1 }}>
-                  <label className="input-label">Date</label>
-                  <input type="date" className="input-field" value={newDate} onChange={e => setNewDate(e.target.value)} required />
+            )}
+
+            {matchResult !== 'success' && (
+              <form onSubmit={handleRequestVisit}>
+                <div className="input-group">
+                  <label className="input-label">Care Type</label>
+                  <select className="input-field" value={newType} onChange={e => setNewType(e.target.value)} required>
+                    {CARE_TYPES.map(t => <option key={t}>{t}</option>)}
+                  </select>
                 </div>
-                <div className="input-group" style={{ flex: 1 }}>
-                  <label className="input-label">Time</label>
-                  <input type="time" className="input-field" value={newTime} onChange={e => setNewTime(e.target.value)} required />
+                <div className="input-group">
+                  <label className="input-label">Preferred Date</label>
+                  <input type="date" className="input-field" value={newDate} onChange={e => setNewDate(e.target.value)} required min={new Date().toISOString().split('T')[0]} />
                 </div>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Submit Request</button>
-                <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
-              </div>
-            </form>
+                <div className="input-group">
+                  <label className="input-label">Notes (optional)</label>
+                  <textarea className="input-field" rows={2} style={{ resize: 'vertical' }} value={newNotes} onChange={e => setNewNotes(e.target.value)} placeholder="Any special instructions..." />
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                  <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={matching}>
+                    {matching ? 'Finding best nurse…' : 'Find & Book'}
+                  </button>
+                  <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+                </div>
+              </form>
+            )}
+
+            {matchResult === 'success' && (
+              <button className="btn btn-outline" style={{ width: '100%', marginTop: '0.5rem' }} onClick={() => setShowModal(false)}>
+                Close
+              </button>
+            )}
           </div>
         </div>
       )}
 
+      {/* Stats */}
       <div className="stat-grid">
         <div className="stat-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="stat-title">Upcoming Visits</div>
-              <div className="stat-value">{appointments.filter(a => a.status === 'CONFIRMED' || a.status === 'PENDING').length}</div>
-            </div>
-            <div style={{ padding: '10px', background: 'rgba(14, 165, 233, 0.1)', borderRadius: '10px', color: 'var(--accent)' }}>
-              <Calendar size={24} />
-            </div>
+            <div><div className="stat-title">Upcoming Visits</div><div className="stat-value">{upcoming.length}</div></div>
+            <div style={{ padding: '10px', background: 'rgba(14,165,233,0.1)', borderRadius: '10px', color: 'var(--accent)' }}><Calendar size={24} /></div>
           </div>
         </div>
         <div className="stat-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="stat-title">Completed Visits</div>
-              <div className="stat-value">{appointments.filter(a => a.status === 'COMPLETED').length}</div>
-            </div>
-            <div style={{ padding: '10px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '10px', color: 'var(--success)' }}>
-              <Activity size={24} />
-            </div>
+            <div><div className="stat-title">Completed Visits</div><div className="stat-value">{completed.length}</div></div>
+            <div style={{ padding: '10px', background: 'rgba(16,185,129,0.1)', borderRadius: '10px', color: 'var(--success)' }}><Activity size={24} /></div>
           </div>
         </div>
         <div className="stat-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="stat-title">Unread Messages</div>
-              <div className="stat-value">0</div>
-            </div>
-            <div style={{ padding: '10px', background: 'rgba(79, 70, 229, 0.1)', borderRadius: '10px', color: 'var(--primary)' }}>
-              <MessageSquare size={24} />
-            </div>
+            <div><div className="stat-title">Total Visits</div><div className="stat-value">{appointments.length}</div></div>
+            <div style={{ padding: '10px', background: 'rgba(79,70,229,0.1)', borderRadius: '10px', color: 'var(--primary)' }}><MessageSquare size={24} /></div>
           </div>
         </div>
       </div>
 
-      <div className="dashboard-grid">
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.25rem' }}>Your Appointments</h2>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button 
-                onClick={() => setActiveTab('upcoming')}
-                style={{ background: 'none', border: 'none', color: activeTab === 'upcoming' ? 'var(--text-main)' : 'var(--text-muted)', cursor: 'pointer', fontWeight: activeTab === 'upcoming' ? '600' : '400', paddingBottom: '0.25rem', borderBottom: activeTab === 'upcoming' ? '2px solid var(--primary)' : '2px solid transparent' }}
-              >
-                Upcoming
-              </button>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {appointments.length === 0 ? <p style={{ color: 'var(--text-muted)' }}>No appointments found.</p> : appointments.map(visit => (
-              <div key={visit.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'var(--surface-light)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                    <User size={24} />
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>{visit.care_type}</h3>
-                    <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Calendar size={14} /> {visit.date}</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Clock size={14} /> {visit.start_time}</span>
-                    </div>
-                  </div>
+      {/* Appointment list */}
+      <div className="card">
+        <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Your Appointments</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {appointments.length === 0 && (
+            <p style={{ color: 'var(--text-muted)' }}>No appointments yet. Request your first visit above.</p>
+          )}
+          {appointments.map(visit => (
+            <div key={visit.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'var(--surface-light)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+                  <User size={24} />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Nurse</div>
-                    <div style={{ fontWeight: '500' }}>{visit.nurse_details?.user?.first_name || 'Pending'} {visit.nurse_details?.user?.last_name || ''}</div>
+                <div>
+                  <h3 style={{ fontSize: '1rem', marginBottom: '0.2rem' }}>{visit.care_type}</h3>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                    Nurse: {visit.nurse_details?.user?.first_name || '—'} {visit.nurse_details?.user?.last_name || ''} &bull; {visit.nurse_details?.specialisation || ''}
                   </div>
-                  <span className={`badge ${visit.status === 'CONFIRMED' ? 'badge-confirmed' : 'badge-pending'}`}>
-                    {visit.status}
-                  </span>
-                  <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                    <ChevronRight size={20} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.2rem' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Calendar size={12} /> {visit.date}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Clock size={12} /> {visit.start_time}</span>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card">
-          <h2 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Secure Messages</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <p style={{ color: 'var(--text-muted)' }}>No recent messages.</p>
-          </div>
-          <button className="btn btn-outline" style={{ width: '100%', marginTop: '1.5rem' }}>
-            View All Messages
-          </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span className={`badge ${statusClass(visit.status)}`}>{visit.status}</span>
+                <ChevronRight size={18} style={{ color: 'var(--text-muted)' }} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
