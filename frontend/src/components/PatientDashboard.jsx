@@ -3,7 +3,11 @@ import axios from 'axios';
 import { Calendar, Clock, Activity, Plus, MessageSquare, ChevronRight, User, Sparkles, X } from 'lucide-react';
 
 const API = `http://${window.location.hostname}:8000/api`;
-const CARE_TYPES = ['Wound Care', 'IV Therapy', 'General Checkup', 'Pediatrics', 'Physiotherapy', 'Post-Op Care'];
+const CARE_TYPES = [
+  'Wound Care', 'IV Therapy', 'General Care', 'Pediatrics', 'Physiotherapy',
+  'Post-Op Care', 'Cardiac Care', 'Oncology', 'Respiratory Care', 'Mental Health',
+  'Geriatric Care', 'Palliative Care', 'Diabetes Management', 'Neurology', 'Orthopedics',
+];
 
 export default function PatientDashboard({ user }) {
   const [appointments, setAppointments] = useState([]);
