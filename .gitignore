@@ -180,3 +180,4 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 NurseConnect_MVP_Implementation_Plan.md
+/.claude
