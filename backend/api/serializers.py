@@ -78,4 +78,4 @@ class SpecialisationChangeRequestSerializer(serializers.ModelSerializer):
             'requested_at', 'reviewed_by', 'reviewed_by_details',
             'reviewed_at', 'admin_note',
         ]
-        read_only_fields = ['status', 'reviewed_by', 'reviewed_at', 'current_specialisation', 'requested_at']
+        read_only_fields = ['status', 'reviewed_by', 'reviewed_at', 'current_specialisation', 'requested_at', 'nurse']
