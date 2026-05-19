@@ -124,20 +124,36 @@ export default function NurseDashboard({ user, onNavigate }) {
 
       {/* Spec change request modal */}
       {showSpecModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card" style={{ width: '100%', maxWidth: '440px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem' }}>Request Specialisation Change</h2>
-              <button onClick={() => setShowSpecModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={20} /></button>
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setShowSpecModal(false); }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.3)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', zIndex: 100 }}
+        >
+          <div 
+            className="animate-slide-in-right" 
+            style={{ 
+              width: '100%', maxWidth: '440px', background: 'var(--surface)', maxHeight: 'calc(100vh - 3rem)', 
+              boxShadow: '-10px 0 30px rgba(0,0,0,0.15)', border: '1px solid var(--glass-border)', borderRadius: '16px', margin: '1.5rem',
+              display: 'flex', flexDirection: 'column', padding: '2.5rem 2rem', overflowY: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>Request Spec Change</h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Submit a formal request to change your current specialisation.</p>
+              </div>
+              <button onClick={() => setShowSpecModal(false)} style={{ background: 'var(--surface-light)', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}><X size={18} /></button>
             </div>
-            <div style={{ padding: '0.75rem 1rem', background: 'rgba(79,70,229,0.06)', border: '1px solid rgba(79,70,229,0.15)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Current: <strong style={{ color: 'var(--primary)' }}>{nurseProfile?.specialisation}</strong>
-              <br />Your request will be reviewed by an administrator.
+            
+            <div style={{ padding: '1rem 1.25rem', background: 'rgba(79,70,229,0.06)', border: '1px solid rgba(79,70,229,0.15)', borderRadius: '12px', marginBottom: '2rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+              Current Specialisation: <strong style={{ color: 'var(--primary)' }}>{nurseProfile?.specialisation || 'None'}</strong>
+              <div style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>Your request will be submitted to the administration for review.</div>
             </div>
+
             {specError && (
-              <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}>{specError}</div>
+              <div style={{ padding: '0.75rem', background: 'rgba(239,68,68,0.08)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.875rem' }}>{specError}</div>
             )}
-            <form onSubmit={handleSpecRequest}>
+            
+            <form onSubmit={handleSpecRequest} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
               <div className="input-group">
                 <label className="input-label">Requested Specialisation</label>
                 <select className="input-field" value={newSpec} onChange={e => setNewSpec(e.target.value)} required>
@@ -147,9 +163,9 @@ export default function NurseDashboard({ user, onNavigate }) {
               </div>
               <div className="input-group">
                 <label className="input-label">Reason</label>
-                <textarea className="input-field" rows={3} style={{ resize: 'vertical' }} value={specReason} onChange={e => setSpecReason(e.target.value)} placeholder="Explain why you're requesting this change…" required />
+                <textarea className="input-field" rows={4} style={{ resize: 'vertical' }} value={specReason} onChange={e => setSpecReason(e.target.value)} placeholder="Explain why you're requesting this change…" required />
               </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto', paddingTop: '2rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={specSubmitting}>{specSubmitting ? 'Submitting…' : 'Submit Request'}</button>
                 <button type="button" className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowSpecModal(false)}>Cancel</button>
               </div>
