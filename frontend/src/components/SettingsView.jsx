@@ -1,7 +1,7 @@
 import React from 'react';
 import { Bell, Shield, Smartphone, Globe } from 'lucide-react';
 
-export default function SettingsView() {
+export default function SettingsView({ user }) {
   return (
     <div className="animate-fade-in">
       <h1 style={{ fontSize: '2rem', marginBottom: '2rem' }}>Platform <span className="text-gradient">Settings</span></h1>
@@ -20,10 +20,12 @@ export default function SettingsView() {
               <input type="checkbox" defaultChecked style={{ width: '18px', height: '18px' }} />
               <span>SMS alerts for appointment updates</span>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
-              <input type="checkbox" defaultChecked style={{ width: '18px', height: '18px' }} />
-              <span>In-app secure message notifications</span>
-            </label>
+            {user?.role !== 'ADMIN' && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
+                <input type="checkbox" defaultChecked style={{ width: '18px', height: '18px' }} />
+                <span>In-app secure message notifications</span>
+              </label>
+            )}
           </div>
         </div>
 
