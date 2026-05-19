@@ -7,7 +7,7 @@ echo  =============================================
 echo.
 
 echo [1/2] Starting Django ASGI Backend (Daphne)...
-start cmd /k "title NurseConnect Backend && cd /d "%~dp0backend" && .\venv\Scripts\activate.bat && python -m daphne -p 8000 config.asgi:application"
+start cmd /k "title NurseConnect Backend && cd /d "%~dp0backend" && .\venv\Scripts\activate.bat && python -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"
 
 timeout /t 2 /nobreak >nul
 
