@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Calendar, Plus, Trash2, RefreshCw } from 'lucide-react';
 
-const API = 'http://localhost:8000/api';
+const API = `http://${window.location.hostname}:8000/api`;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function AvailabilityManager({ user }) {
