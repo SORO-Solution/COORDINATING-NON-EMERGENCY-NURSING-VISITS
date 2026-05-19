@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Calendar, Clock, Activity, Plus, MessageSquare, ChevronRight, User, Sparkles, X } from 'lucide-react';
 
-const API = 'http://localhost:8000/api';
+const API = `http://${window.location.hostname}:8000/api`;
 const CARE_TYPES = ['Wound Care', 'IV Therapy', 'General Checkup', 'Pediatrics', 'Physiotherapy', 'Post-Op Care'];
 
 export default function PatientDashboard({ user }) {
