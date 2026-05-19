@@ -1,231 +1,333 @@
-# NurseConnect MVP
+# NurseConnect
 
-**NurseConnect** is a secure, role-based web platform designed to streamline and coordinate non-emergency nursing visits. It seamlessly connects patients with specialized nurses while providing administrative oversight for healthcare organizations.
-
-This repository contains the Minimum Viable Product (MVP), fully functional end-to-end with live database interaction, JSON Web Token (JWT) authentication, and a stunning "glassmorphism" React interface.
+**NurseConnect** is a secure, full-stack platform for coordinating non-emergency nursing visits. It connects patients with specialised nurses, gives nurses tools to manage their schedule and availability, and gives administrators complete oversight — all backed by role-based access control, AES-256-GCM encrypted messaging, and real-time WebSocket chat.
 
 ---
 
-## 🚀 Technology Stack
+## Technology Stack
 
 ### Backend
-*   **Python 3.11 & Django 6.0**: High-level, robust backend framework.
-*   **Django REST Framework (DRF)**: Powers the JSON API endpoints.
-*   **Simple JWT**: Stateless, secure token-based authentication.
-*   **SQLite3**: Default database for the MVP (easily scalable to PostgreSQL).
-
-#### `requirements.txt`
-```text
-asgiref==3.11.1
-Django==6.0.5
-django-cors-headers==4.9.0
-djangorestframework==3.17.1
-djangorestframework_simplejwt==5.5.1
-PyJWT==2.12.1
-sqlparse==0.5.5
-tzdata==2026.2
-```
+| Package | Purpose |
+|---|---|
+| Django 6.0.5 | Core web framework |
+| Django REST Framework 3.17.1 | JSON API layer |
+| Simple JWT 5.5.1 | Stateless JWT authentication (access 15 min / refresh 7 days) |
+| Django Channels 4.2.0 | WebSocket support (real-time messaging) |
+| Daphne 4.2.1 | ASGI server (handles both HTTP and WebSocket) |
+| cryptography 43.0.3 | AES-256-GCM message encryption at rest |
+| ReportLab 4.2.5 | PDF report generation |
+| Pillow 12.2.0 | Image processing |
+| SQLite3 | Development database (drop-in replacement with PostgreSQL for production) |
 
 ### Frontend
-*   **React.js 18 & Vite**: Blazing fast modern frontend tooling.
-*   **Vanilla CSS**: Custom-built, premium glassmorphism styling with dark/light mode support.
-*   **Axios**: For secure HTTP request handling.
-*   **Lucide React**: Beautiful, consistent iconography.
+| Package | Purpose |
+|---|---|
+| React 19 + Vite | UI framework and build tooling |
+| Axios | HTTP client with JWT header injection |
+| Lucide React | Icon set |
+| Custom CSS | Glassmorphism design system with dark/light mode |
 
 ---
 
-## ✨ MVP Features
+## Features
 
-### 1. Robust Authentication Flow
-*   Secure Login and Sign Up portals.
-*   JWT handling (Access & Refresh tokens).
-*   Dynamic role-based routing (`PATIENT`, `NURSE`, `ADMIN`).
+### Authentication & Access Control
+- JWT login with role-based routing (`PATIENT`, `NURSE`, `ADMIN`, `SUPERADMIN`)
+- Protected API endpoints via DRF permission classes per role
+- Patient self-registration
 
-### 2. Patient Capabilities
-*   **Request Visits**: Patients can select available nurses based on specialty, view their available time slots, and submit booking requests directly to the database.
-*   **Dashboard Tracker**: Live tracking of upcoming, pending, and completed visits.
+### Patient Dashboard
+- **Smart visit booking** — patient selects care type and date; the system auto-matches the best nurse by specialisation → availability → workload (fewest active appointments wins)
+- Live appointment tracker with status badges (PENDING / CONFIRMED / COMPLETED / CANCELLED)
 
-### 3. Nurse Capabilities
-*   **Schedule Management**: Nurses can view all dynamically assigned visits and patient locations.
-*   **Availability**: Manage and declare available working hours.
-*   **Visit Execution**: One-click functionality to mark visits as `COMPLETED`.
+### Nurse Dashboard
+- Full schedule view with confirm/complete actions per visit
+- **Availability Manager** — set availability slots over a date range, pick days of the week, add multiple time slots per day
+- Specialisation change request workflow (nurse submits → admin reviews)
+- Downloadable schedule reports (CSV and PDF)
+- Downloadable availability report (CSV)
 
-### 4. Administrator Capabilities
-*   **Global Oversight**: Live metrics tracking total appointments and pending requests.
-*   **Schedule Control**: Full read/write access to modify any patient appointment (date/time) and approve/deny statuses (`PENDING`, `CONFIRMED`, `CANCELLED`).
-*   **Fleet Tracking**: Complete table view of all nurse availabilities.
+### Admin Dashboard
+- Platform-wide appointment table with inline status editor and date/time editing
+- User management: create patients, nurses, and admins; search and filter
+- **Bulk availability assignment** — set availability for multiple nurses at once across a date range
+- Nurse workload bar chart (sorted by active appointment count)
+- Direct specialisation assignment to nurses (bypasses request workflow)
+- Specialisation change request review (approve / reject with notes)
+- Five downloadable reports: appointments CSV, appointments PDF, nurse workload PDF, users CSV, availability CSV
+
+### Secure Messaging
+- Per-appointment chat threads (one thread per appointment)
+- **Real-time via WebSocket** — messages appear instantly for both participants
+- **AES-256-GCM encryption at rest** — all messages stored encrypted; decrypted only on read
+- Message history loaded on thread open; WebSocket delivers new messages live
+- Accessible to the patient, the assigned nurse, and any admin
+
+### Reports & Exports
+| Report | Who | Format |
+|---|---|---|
+| My Schedule | Nurse | CSV, PDF |
+| My Availability | Nurse | CSV |
+| All Appointments | Admin | CSV, PDF |
+| Nurse Workload | Admin | PDF |
+| All Users | Admin | CSV |
+| All Availability | Admin | CSV |
+| User Directory (credentials) | CLI | PDF |
 
 ---
 
-## 🛠 Quick Start Guide
+## Demo Accounts
 
-We have fully automated the startup process for the MVP. You do not need to start the servers manually.
+All accounts use password: `password123`
+
+The database is seeded by running `python manage.py populate_data`.
+
+| Role | Username | Notes |
+|---|---|---|
+| Superadmin | `superadmin` | Full platform access |
+| Admin | `test_admin1` | Alexandra Turner, Chicago |
+| Admin | `test_admin2` | Marcus Reynolds, Houston |
+| Admin | `test_admin3` | Priya Sharma, Los Angeles |
+| Nurse | `test_nurse1` – `test_nurse25` | 15 different specialisations |
+| Patient | `test_patient1` – `test_patient100` | 100 patients across 15 cities |
+
+Seeded mock data includes **200+ appointments** and **270+ encrypted messages**.
+
+To export all credentials to a formatted PDF:
+```
+python manage.py export_users_pdf
+```
+Output: `NurseConnect_User_Directory.pdf` in the project root.
+
+---
+
+## Quick Start
 
 ### Prerequisites
-Make sure you have the following installed on your Windows machine:
-*   [Python 3.11+](https://www.python.org/downloads/)
-*   [Node.js (LTS)](https://nodejs.org/)
+- Python 3.11+
+- Node.js LTS
 
-### Initial Setup (Running from Scratch on a New PC)
-If you are cloning or copying this project to a new machine, you must install the dependencies and set up the database before running the app.
+### 1. Backend Setup
 
-1. **Backend Setup (Terminal 1)**
-   Navigate to the `backend` directory, create a virtual environment, and install the Python dependencies:
-   ```cmd
-   cd backend
-   python -m venv venv
-   .\venv\Scripts\activate
-   pip install -r requirements.txt
-   python manage.py migrate
-   python create_samples.py
-   ```
-   *(Note: `create_samples.py` automatically populates the database with demo accounts and sample data).*
+```bash
+cd backend
+python -m venv venv
 
-2. **Frontend Setup (Terminal 2)**
-   Navigate to the `frontend` directory and install the Node modules:
-   ```cmd
-   cd frontend
-   npm install
-   ```
+# Windows
+venv\Scripts\activate
 
-### Launching the Application
-Once the initial setup is complete (or if you already have the environment set up), you can use the automated startup script:
-1. Navigate to the project root directory.
-2. Double-click the **`run_mvp.bat`** file, or run it via PowerShell/CMD:
-   ```cmd
-   .\run_mvp.bat
-   ```
-3. The script will automatically activate the Python virtual environment, start the Django API, and spin up the Vite React server.
-4. Your browser will open automatically to `http://localhost:5173`.
+# macOS / Linux
+source venv/bin/activate
 
----
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py populate_data
+```
 
-## 🔑 Demo Accounts
+### 2. Frontend Setup
 
-The database is pre-seeded with the following accounts for immediate testing. 
+```bash
+cd frontend
+npm install
+```
 
-*All accounts use the password:* `password123`
+### 3. Run the Application
 
-| Role | Username | Description |
-| :--- | :--- | :--- |
-| **Admin** | `admin` | Full system access and appointment overriding. |
-| **Nurse** | `nurse1` | Wound Care & IV Therapy Specialist. |
-| **Nurse** | `nurse2` | Pediatrics & General Care Specialist. |
-| **Patient** | `patient1` | (There are 6 total: `patient1` through `patient6`) |
+You need **two terminals**.
+
+**Terminal 1 — ASGI/WebSocket server (Daphne):**
+```bash
+cd backend
+venv\Scripts\python.exe -m daphne -p 8000 config.asgi:application
+```
+
+> Daphne is required. Do **not** use `python manage.py runserver` — that starts a WSGI server which has no WebSocket support and will cause messaging to fail with 404 errors on `/ws/chat/`.
+
+**Terminal 2 — React dev server:**
+```bash
+cd frontend
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser.
 
 ---
 
-## 📁 Directory Structure
+## Architecture
 
-```text
+```
+┌─────────────────────────────────────────────────────────┐
+│  React Frontend  (Vite, port 5173)                      │
+│  ┌──────────────┐  ┌───────────┐  ┌──────────────────┐  │
+│  │ PatientDash  │  │ NurseDash │  │   AdminDashboard │  │
+│  └──────────────┘  └───────────┘  └──────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │  Messaging.jsx  (WebSocket client)               │    │
+│  └──────────────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │  AvailabilityManager.jsx  (standalone view)      │    │
+│  └──────────────────────────────────────────────────┘    │
+└─────────────────────┬───────────────────────────────────┘
+                      │ HTTP (Axios)  +  WebSocket
+┌─────────────────────▼───────────────────────────────────┐
+│  Daphne ASGI Server  (port 8000)                        │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │  ProtocolTypeRouter                              │    │
+│  │  ├─ http  → Django REST Framework               │    │
+│  │  └─ websocket → URLRouter → ChatConsumer        │    │
+│  └──────────────────────────────────────────────────┘    │
+│                                                          │
+│  ┌───────────┐  ┌─────────────┐  ┌──────────────────┐   │
+│  │  api/     │  │  api/       │  │  api/            │   │
+│  │  views.py │  │  consumers  │  │  reports.py      │   │
+│  │  (REST)   │  │  (WS chat)  │  │  (CSV/PDF)       │   │
+│  └───────────┘  └─────────────┘  └──────────────────┘   │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │  SQLite DB  (AES-256-GCM encrypted messages)    │    │
+│  └──────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Nurse Matching Algorithm
+
+When a patient requests a visit:
+1. Filter nurses whose specialisation contains the requested care type
+2. From those, keep only nurses with an unbooked availability slot on the requested date
+3. Sort by active appointment count (fewest wins — load balancing)
+4. Create the appointment and mark the slot as booked (atomic)
+
+### Message Encryption
+
+Each message is encrypted before being written to the database:
+- Generate a random 12-byte nonce
+- Encrypt with AES-256-GCM using the app's 32-byte base64 key
+- Store `base64(nonce + ciphertext)` in the `encrypted_content` field
+- Decrypt on every read; WebSocket broadcasts the plaintext only in memory
+
+---
+
+## API Reference
+
+### Auth
+| Method | URL | Description |
+|---|---|---|
+| POST | `/api/token/` | Login — returns access + refresh tokens |
+| POST | `/api/token/refresh/` | Refresh access token |
+| POST | `/api/register/` | Patient self-registration |
+| GET | `/api/me/` | Current user info |
+
+### Appointments
+| Method | URL | Description |
+|---|---|---|
+| GET | `/api/appointments/` | List appointments (filtered by role) |
+| POST | `/api/appointments/request/` | Smart nurse-matched visit request |
+| PATCH | `/api/appointments/{id}/` | Update status / date / time |
+| DELETE | `/api/appointments/{id}/` | Admin only |
+
+### Nurses & Profiles
+| Method | URL | Description |
+|---|---|---|
+| GET | `/api/nurses/` | List all nurse profiles |
+| GET | `/api/nurses/me/` | Logged-in nurse's own profile |
+| PATCH | `/api/nurses/{id}/set-specialisation/` | Admin: direct spec assignment |
+
+### Availability
+| Method | URL | Description |
+|---|---|---|
+| GET | `/api/availabilities/` | List slots (nurse sees own; admin sees all) |
+| POST | `/api/availabilities/` | Create single slot |
+| POST | `/api/availabilities/bulk-create/` | Create slots across a date range |
+| DELETE | `/api/availabilities/{id}/` | Delete a slot |
+
+Query params on GET: `nurse_id`, `date_from`, `date_to`, `status` (open/booked)
+
+### Messages
+| Method | URL | Description |
+|---|---|---|
+| GET | `/api/messages/?appointment={id}` | Decrypted message history |
+| POST | `/api/messages/send/` | Send encrypted message (REST fallback) |
+
+### Specialisation Requests
+| Method | URL | Description |
+|---|---|---|
+| GET | `/api/spec-requests/` | List requests (nurse sees own; admin sees all) |
+| POST | `/api/spec-requests/` | Nurse submits change request |
+| POST | `/api/spec-requests/{id}/approve/` | Admin approves |
+| POST | `/api/spec-requests/{id}/reject/` | Admin rejects |
+
+### Reports (authenticated)
+```
+GET /api/reports/nurse/schedule/csv/
+GET /api/reports/nurse/schedule/pdf/
+GET /api/reports/nurse/availability/csv/
+GET /api/reports/admin/appointments/csv/
+GET /api/reports/admin/appointments/pdf/
+GET /api/reports/admin/workload/pdf/
+GET /api/reports/admin/users/csv/
+GET /api/reports/admin/availability/csv/
+```
+
+### WebSocket
+```
+ws://localhost:8000/ws/chat/{appointment_id}/?token={jwt_access_token}
+```
+- Authenticate by passing the JWT as a query parameter
+- Send: `{ "content": "message text" }`
+- Receive: `{ "type": "message", "id": ..., "content": ..., "sender_name": ..., "timestamp": ... }`
+
+---
+
+## Directory Structure
+
+```
 COORDINATING NON-EMERGENCY NURSING VISITS/
 │
-├── backend/                  # Django REST API
-│   ├── api/                  # Core App (Models, Views, Serializers, URLs)
-│   ├── config/               # Project Settings & Config
-│   ├── venv/                 # Python Virtual Environment
-│   ├── db.sqlite3            # Database (Pre-seeded)
-│   └── create_samples.py     # Script to wipe and re-seed demo data
+├── backend/
+│   ├── api/
+│   │   ├── management/commands/
+│   │   │   ├── populate_data.py       # Seeds 1 superadmin, 3 admins, 25 nurses, 100 patients
+│   │   │   └── export_users_pdf.py    # Exports all credentials to PDF
+│   │   ├── consumers.py               # WebSocket chat consumer (AES-256-GCM)
+│   │   ├── encryption.py              # AES-256-GCM encrypt/decrypt helpers
+│   │   ├── models.py                  # CustomUser, NurseProfile, Appointment, Message, ...
+│   │   ├── permissions.py             # IsAdminRole, IsNurseRole, IsNurseOrAdmin
+│   │   ├── reports.py                 # CSV and PDF report views
+│   │   ├── routing.py                 # WebSocket URL patterns
+│   │   ├── serializers.py             # DRF serializers
+│   │   ├── urls.py                    # REST URL patterns
+│   │   └── views.py                   # ViewSets + smart nurse matching
+│   ├── config/
+│   │   ├── asgi.py                    # ASGI app (ProtocolTypeRouter for HTTP + WS)
+│   │   ├── settings.py
+│   │   └── urls.py
+│   ├── venv/
+│   ├── db.sqlite3
+│   └── requirements.txt
 │
-├── frontend/                 # Vite + React Application
-│   ├── src/
-│   │   ├── components/       # Dashboards, Login, Settings, Profile
-│   │   ├── App.jsx           # Main Application Router & Layout
-│   │   └── index.css         # Global Theme & Glassmorphism Styles
-│   ├── package.json          # Node Dependencies
-│   └── vite.config.js        # Vite Config
+├── frontend/
+│   └── src/
+│       ├── components/
+│       │   ├── AdminDashboard.jsx      # Appointments, users, workload, availability, reports
+│       │   ├── AvailabilityManager.jsx # Standalone availability manager (create + view + delete)
+│       │   ├── Login.jsx
+│       │   ├── Messaging.jsx           # Real-time WebSocket chat
+│       │   ├── NurseDashboard.jsx      # Schedule, availability summary, spec requests
+│       │   ├── PatientDashboard.jsx    # Smart visit booking
+│       │   ├── ProfileView.jsx
+│       │   └── SettingsView.jsx
+│       ├── App.jsx                     # Layout, sidebar nav, role-based routing
+│       └── index.css                   # Glassmorphism design system
 │
-└── run_mvp.bat               # Automated dual-server startup script
+└── README.md
 ```
 
 ---
 
-## 📝 Database Seeding Script (`create_samples.py`)
+## Security Notes (MVP)
 
-For reference, here is the Python script used to wipe and re-seed the demo database with the initial sample data, including all default user roles, nurses, and mock appointments.
-
-```python
-import os
-import django
-import random
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
-django.setup()
-
-from api.models import CustomUser, NurseProfile, NurseAvailability, Appointment
-from datetime import date, time, timedelta
-
-def create_samples():
-    print("Clearing existing data...")
-    Appointment.objects.all().delete()
-    NurseAvailability.objects.all().delete()
-    NurseProfile.objects.all().delete()
-    CustomUser.objects.all().delete()
-
-    print("Creating Admin...")
-    admin = CustomUser.objects.create_superuser(
-        username='admin',
-        email='admin@nurseconnect.com',
-        password='password123',
-        role='ADMIN',
-        first_name='System',
-        last_name='Admin'
-    )
-
-    print("Creating Nurses...")
-    nurse1_user = CustomUser.objects.create_user(
-        username='nurse1', email='nurse1@nurseconnect.com', password='password123',
-        role='NURSE', first_name='Sarah', last_name='Jenkins'
-    )
-    nurse1_profile = NurseProfile.objects.create(user=nurse1_user, specialisation='Wound Care & IV Therapy')
-
-    nurse2_user = CustomUser.objects.create_user(
-        username='nurse2', email='nurse2@nurseconnect.com', password='password123',
-        role='NURSE', first_name='David', last_name='Chen'
-    )
-    nurse2_profile = NurseProfile.objects.create(user=nurse2_user, specialisation='Pediatrics & General Care')
-
-    nurses = [nurse1_profile, nurse2_profile]
-
-    print("Creating 6 Patients...")
-    patients_data = [
-        ('patient1', 'Alex', 'Johnson'),
-        ('patient2', 'Maria', 'Garcia'),
-        ('patient3', 'James', 'Smith'),
-        ('patient4', 'Linda', 'Williams'),
-        ('patient5', 'Robert', 'Brown'),
-        ('patient6', 'Patricia', 'Jones'),
-    ]
-
-    patients = []
-    for username, fname, lname in patients_data:
-        p = CustomUser.objects.create_user(
-            username=username, email=f'{username}@nurseconnect.com', password='password123',
-            role='PATIENT', first_name=fname, last_name=lname
-        )
-        patients.append(p)
-
-    print("Creating Mock Appointments...")
-    today = date.today()
-    care_types = ['Wound Care', 'IV Therapy', 'General Checkup', 'Pediatrics']
-    statuses = ['PENDING', 'CONFIRMED', 'COMPLETED']
-    
-    for i, p in enumerate(patients):
-        Appointment.objects.create(
-            patient=p,
-            nurse=random.choice(nurses),
-            date=today + timedelta(days=random.randint(1, 5)),
-            start_time=time(random.randint(9, 16), 0),
-            care_type=random.choice(care_types),
-            status=random.choice(statuses),
-            notes='Patient needs routine care.'
-        )
-
-    print("Sample accounts created successfully!")
-    print("Admin: admin / password123")
-    print("Nurses: nurse1, nurse2 / password123")
-    print("Patients: patient1 to patient6 / password123")
-
-if __name__ == '__main__':
-    create_samples()
-```
+- `SECRET_KEY` and `MESSAGE_ENCRYPTION_KEY` in `settings.py` are development values — rotate before any deployment
+- `CORS_ALLOW_ALL_ORIGINS = True` is set for the MVP — restrict to your domain in production
+- `AllowedHostsOriginValidator` is disabled for WebSocket in dev — re-enable for production
+- SQLite is not suitable for production under concurrent load — migrate to PostgreSQL
+- Access tokens expire in 15 minutes; refresh tokens in 7 days
