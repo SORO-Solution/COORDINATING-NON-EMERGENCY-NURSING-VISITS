@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import AvailabilityManager from './AvailabilityManager';
 
-const API = 'http://localhost:8000/api';
+const API = `http://${window.location.hostname}:8000/api`;
 const SPECIALISATIONS = [
   'Wound Care', 'IV Therapy', 'General Care', 'Pediatrics', 'Physiotherapy',
   'Post-Op Care', 'Cardiac Care', 'Oncology', 'Respiratory Care', 'Mental Health',
