@@ -12,6 +12,19 @@ import Login from './components/Login';
 import ProfileView from './components/ProfileView';
 import SettingsView from './components/SettingsView';
 
+// Register global 401 interceptor at startup to capture expired sessions immediately
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.dispatchEvent(new Event('nc-logout'));
+    }
+    return Promise.reject(error);
+  }
+);
+
 function App() {
   const [user, setUser] = useState(null);
   const [theme, setTheme] = useState('light');
@@ -48,21 +61,12 @@ function App() {
     const storedUser = localStorage.getItem('user');
     if (storedUser) setUser(JSON.parse(storedUser));
 
-    const interceptor = axios.interceptors.response.use(
-      response => response,
-      error => {
-        if (error.response && error.response.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setUser(null);
-          setTotalUnread(0);
-        }
-        return Promise.reject(error);
-      }
-    );
-    return () => {
-      axios.interceptors.response.eject(interceptor);
+    const handleLogoutEvent = () => {
+      setUser(null);
+      setTotalUnread(0);
     };
+    window.addEventListener('nc-logout', handleLogoutEvent);
+    return () => window.removeEventListener('nc-logout', handleLogoutEvent);
   }, []);
 
   // Poll for unread message counts every 30 seconds
