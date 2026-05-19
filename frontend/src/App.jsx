@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { HeartPulse, Bell, User, Settings, LogOut, Sun, Moon, Shield, MessageSquare, LayoutDashboard, Calendar } from 'lucide-react';
 
-const API = 'http://localhost:8000/api';
+const API = `http://${window.location.hostname}:8000/api`;
 import PatientDashboard from './components/PatientDashboard';
 import NurseDashboard from './components/NurseDashboard';
 import AdminDashboard from './components/AdminDashboard';
@@ -36,7 +36,7 @@ function App() {
   useEffect(() => {
     if (!user || user.role !== 'ADMIN') return;
     fetchPendingSpecs();
-    const iv = setInterval(fetchPendingSpecs, 30000);
+    const iv = setInterval(fetchPendingSpecs, 3000);
     return () => clearInterval(iv);
   }, [user, fetchPendingSpecs]);
 
@@ -74,7 +74,7 @@ function App() {
   useEffect(() => {
     if (!user) return;
     refreshUnread(user);
-    const iv = setInterval(() => refreshUnread(user), 30000);
+    const iv = setInterval(() => refreshUnread(user), 3000);
     return () => clearInterval(iv);
   }, [user, refreshUnread]);
 
